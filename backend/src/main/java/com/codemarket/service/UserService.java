@@ -51,6 +51,30 @@ public class UserService implements UserDetailsService {
         return userRepository.findByEmail(email).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
+    public UserResponse profile(String email) {
+        return toResponse(findByEmail(email));
+    }
+
+    public UserResponse updateProfile(String email, UpdateProfileRequest request) {
+        User user = findByEmail(email);
+        user.setFirstName(request.firstName());
+        user.setLastName(request.lastName());
+        user.setPhone(request.phone());
+        user.setGender(request.gender());
+        user.setProfileImage(request.profileImage());
+        return toResponse(userRepository.save(user));
+    }
+
+    public void changePassword(String email, ChangePasswordRequest request) {
+        User user = findByEmail(email);
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Current password is incorrect");
+        }
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+    }
+
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(username).orElseThrow(() -> new UsernameNotFoundException("User not found"));
@@ -59,6 +83,9 @@ public class UserService implements UserDetailsService {
     }
 
     public static UserResponse toResponse(User user) {
+        return new UserResponse(user.getId(), user.getFirstName(), user.getLastName(), user.getEmail(), user.getPhone(), user.getRole(), user.getGender(), user.getProfileImage());
+
         return new UserResponse(user.getId(), user.getFirstName(), user.getLastName(), user.getEmail(), user.getPhone(), user.getRole(), user.getProfileImage());
+
     }
 }

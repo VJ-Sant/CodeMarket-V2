@@ -6,7 +6,7 @@ import com.codemarket.exception.ApiException;
 import com.codemarket.repository.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -21,6 +21,15 @@ public class ProjectService {
         this.reviewRepository = reviewRepository;
     }
 
+    public List<ProjectResponse> list(String category, String search, BigDecimal minPrice, BigDecimal maxPrice) {
+        List<Project> projects = projectRepository.searchPublished(
+                ProjectStatus.PUBLISHED,
+                normalize(category),
+                normalize(search),
+                minPrice,
+                maxPrice
+        );
+
     public List<ProjectResponse> list(String category) {
         List<Project> projects = category == null || category.isBlank()
                 ? projectRepository.findByStatus(ProjectStatus.PUBLISHED)
@@ -33,6 +42,7 @@ public class ProjectService {
     }
 
     public ProjectResponse create(ProjectRequest request, User seller) {
+        requireSellerRole(seller);
         Project project = Project.builder()
                 .title(request.title()).description(request.description()).price(request.price()).category(request.category())
                 .techStack(request.techStack()).previewUrl(request.previewUrl()).sourceUrl(request.sourceUrl())
@@ -43,6 +53,7 @@ public class ProjectService {
 
     public ProjectResponse update(Long id, ProjectRequest request, User seller) {
         Project project = findProject(id);
+        requireProjectOwnerOrAdmin(project, seller);
         requireSeller(project, seller);
         project.setTitle(request.title());
         project.setDescription(request.description());
@@ -58,6 +69,8 @@ public class ProjectService {
 
     public void delete(Long id, User seller) {
         Project project = findProject(id);
+        requireProjectOwnerOrAdmin(project, seller);
+
         requireSeller(project, seller);
         projectRepository.delete(project);
     }
@@ -82,6 +95,17 @@ public class ProjectService {
         return orderRepository.findByProjectSeller(seller).stream().map(ProjectService::toOrderResponse).toList();
     }
 
+
+    public DownloadResponse download(Long projectId, User user) {
+        Project project = findProject(projectId);
+        boolean isOwner = project.getSeller().getId().equals(user.getId());
+        boolean hasPurchased = orderRepository.existsByBuyerAndProject(user, project);
+        if (!isOwner && !hasPurchased && user.getRole() != Role.ADMIN) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Purchase this project before downloading the source");
+        }
+        return new DownloadResponse(project.getId(), project.getTitle(), project.getSourceUrl());
+    }
+
     public ReviewResponse review(Long projectId, ReviewRequest request, User buyer) {
         Project project = findProject(projectId);
         if (!orderRepository.existsByBuyerAndProject(buyer, project)) {
@@ -102,12 +126,27 @@ public class ProjectService {
         return projectRepository.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Project not found"));
     }
 
+    private void requireSellerRole(User user) {
+        if (user.getRole() != Role.SELLER && user.getRole() != Role.ADMIN) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Only sellers can create projects");
+        }
+    }
+
+    private void requireProjectOwnerOrAdmin(Project project, User user) {
+        if (!project.getSeller().getId().equals(user.getId()) && user.getRole() != Role.ADMIN) {
     private void requireSeller(Project project, User user) {
         if (!project.getSeller().getId().equals(user.getId())) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Only the seller can modify this project");
         }
     }
 
+    private String normalize(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static ProjectResponse toProjectResponse(Project project) {
+        return new ProjectResponse(project.getId(), project.getTitle(), project.getDescription(), project.getPrice(), project.getCategory(),
+                project.getTechStack(), project.getPreviewUrl(), project.getThumbnailUrl(), project.getStatus(),
     private static ProjectResponse toProjectResponse(Project project) {
         return new ProjectResponse(project.getId(), project.getTitle(), project.getDescription(), project.getPrice(), project.getCategory(),
                 project.getTechStack(), project.getPreviewUrl(), project.getSourceUrl(), project.getThumbnailUrl(), project.getStatus(),
