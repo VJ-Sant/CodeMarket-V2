@@ -23,11 +23,13 @@ public class ProjectController {
     }
 
     @GetMapping("/projects")
+
     public List<ProjectResponse> list(@RequestParam(required = false) String category,
                                       @RequestParam(required = false) String search,
                                       @RequestParam(required = false) BigDecimal minPrice,
                                       @RequestParam(required = false) BigDecimal maxPrice) {
         return projectService.list(category, search, minPrice, maxPrice);
+
     }
 
     @GetMapping("/projects/{id}")
@@ -55,10 +57,12 @@ public class ProjectController {
         return projectService.buy(id, currentUser(authentication));
     }
 
+
     @GetMapping("/projects/{id}/download")
     public DownloadResponse download(@PathVariable Long id, Authentication authentication) {
         return projectService.download(id, currentUser(authentication));
     }
+
 
     @PostMapping("/projects/{id}/reviews")
     public ReviewResponse review(@PathVariable Long id, @Valid @RequestBody ReviewRequest request, Authentication authentication) {

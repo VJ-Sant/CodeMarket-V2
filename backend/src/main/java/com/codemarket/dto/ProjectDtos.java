@@ -12,10 +12,13 @@ public final class ProjectDtos {
                                  String category, String techStack, String previewUrl, String sourceUrl,
                                  String thumbnailUrl, ProjectStatus status) {}
     public record ProjectResponse(Long id, String title, String description, BigDecimal price, String category,
-                                  String techStack, String previewUrl, String thumbnailUrl,
+
+                                  String techStack, String previewUrl, String sourceUrl, String thumbnailUrl,
+
                                   ProjectStatus status, AuthDtos.UserResponse seller, LocalDateTime createdAt) {}
     public record OrderResponse(Long id, Long projectId, String projectTitle, BigDecimal amount, OrderStatus status, LocalDateTime createdAt) {}
     public record ReviewRequest(@NotNull @Min(1) @Max(5) Integer rating, String comment) {}
     public record ReviewResponse(Long id, Integer rating, String comment, AuthDtos.UserResponse buyer, LocalDateTime createdAt) {}
     public record DownloadResponse(Long projectId, String projectTitle, String sourceUrl) {}
+
 }

@@ -74,6 +74,7 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
     }
 
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(username).orElseThrow(() -> new UsernameNotFoundException("User not found"));
@@ -83,5 +84,8 @@ public class UserService implements UserDetailsService {
 
     public static UserResponse toResponse(User user) {
         return new UserResponse(user.getId(), user.getFirstName(), user.getLastName(), user.getEmail(), user.getPhone(), user.getRole(), user.getGender(), user.getProfileImage());
+
+        return new UserResponse(user.getId(), user.getFirstName(), user.getLastName(), user.getEmail(), user.getPhone(), user.getRole(), user.getProfileImage());
+
     }
 }

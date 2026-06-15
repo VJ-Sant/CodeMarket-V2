@@ -6,7 +6,6 @@ import com.codemarket.exception.ApiException;
 import com.codemarket.repository.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -30,6 +29,11 @@ public class ProjectService {
                 minPrice,
                 maxPrice
         );
+
+    public List<ProjectResponse> list(String category) {
+        List<Project> projects = category == null || category.isBlank()
+                ? projectRepository.findByStatus(ProjectStatus.PUBLISHED)
+                : projectRepository.findByCategoryIgnoreCaseAndStatus(category, ProjectStatus.PUBLISHED);
         return projects.stream().map(ProjectService::toProjectResponse).toList();
     }
 
@@ -50,6 +54,7 @@ public class ProjectService {
     public ProjectResponse update(Long id, ProjectRequest request, User seller) {
         Project project = findProject(id);
         requireProjectOwnerOrAdmin(project, seller);
+        requireSeller(project, seller);
         project.setTitle(request.title());
         project.setDescription(request.description());
         project.setPrice(request.price());
@@ -65,6 +70,8 @@ public class ProjectService {
     public void delete(Long id, User seller) {
         Project project = findProject(id);
         requireProjectOwnerOrAdmin(project, seller);
+
+        requireSeller(project, seller);
         projectRepository.delete(project);
     }
 
@@ -87,6 +94,7 @@ public class ProjectService {
     public List<OrderResponse> sales(User seller) {
         return orderRepository.findByProjectSeller(seller).stream().map(ProjectService::toOrderResponse).toList();
     }
+
 
     public DownloadResponse download(Long projectId, User user) {
         Project project = findProject(projectId);
@@ -126,6 +134,8 @@ public class ProjectService {
 
     private void requireProjectOwnerOrAdmin(Project project, User user) {
         if (!project.getSeller().getId().equals(user.getId()) && user.getRole() != Role.ADMIN) {
+    private void requireSeller(Project project, User user) {
+        if (!project.getSeller().getId().equals(user.getId())) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Only the seller can modify this project");
         }
     }
@@ -137,6 +147,9 @@ public class ProjectService {
     private static ProjectResponse toProjectResponse(Project project) {
         return new ProjectResponse(project.getId(), project.getTitle(), project.getDescription(), project.getPrice(), project.getCategory(),
                 project.getTechStack(), project.getPreviewUrl(), project.getThumbnailUrl(), project.getStatus(),
+    private static ProjectResponse toProjectResponse(Project project) {
+        return new ProjectResponse(project.getId(), project.getTitle(), project.getDescription(), project.getPrice(), project.getCategory(),
+                project.getTechStack(), project.getPreviewUrl(), project.getSourceUrl(), project.getThumbnailUrl(), project.getStatus(),
                 UserService.toResponse(project.getSeller()), project.getCreatedAt());
     }
 
